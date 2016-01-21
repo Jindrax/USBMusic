@@ -8,6 +8,8 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
+
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -23,6 +25,9 @@ import javax.swing.table.DefaultTableModel;
 
 import Data.Biblioteca;
 import Data.Cancion;
+import Data.Carpeta;
+import Data.Disco;
+import Persistencia.Archivador;
 import jaco.mp3.player.MP3Player;
 
 import javax.swing.JLabel;
@@ -41,6 +46,7 @@ import javax.swing.ImageIcon;
 import java.awt.Font;
 import javax.swing.JSeparator;
 import java.awt.Component;
+import javax.swing.JProgressBar;
 
 public class Window {
 
@@ -51,7 +57,9 @@ public class Window {
 	private JTable folderTable;
 	private JTable songTable;
 	private Biblioteca biblio;
+	private Disco disco;
 	private MP3Player player = new MP3Player();
+	private JProgressBar progressBar;
 
 	/**
 	 * Launch the application.
@@ -88,7 +96,32 @@ public class Window {
 			@Override
 			public void windowOpened(WindowEvent arg0) {				
 				cargarDiscos();
-				inicializarDB();
+				if (!Archivador.biblioExists()) {
+					Loader loader = new Loader();
+					progressBar.setIndeterminate(true);
+					progressBar.setValue(50);
+					progressBar.setString("Cargando");
+					progressBar.setStringPainted(true);
+					JFileChooser chooser = new JFileChooser();
+					chooser.setCurrentDirectory(new java.io.File("."));
+				    chooser.setDialogTitle("Seleccione la Biblioteca");
+				    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				    chooser.setAcceptAllFileFilterUsed(false);
+					if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) { 
+						loader.path = chooser.getSelectedFile();
+					}
+					else {
+						System.out.println("No Selection ");
+					}
+					loader.execute();
+				}else{
+					biblio = Archivador.cargarBiblioteca();
+					cargarSearchTable(biblio.getCanciones());
+				}
+			}
+			@Override
+			public void windowClosing(WindowEvent arg0) {
+				Archivador.guardarBiblioteca(biblio);
 			}
 		});
 		
@@ -100,7 +133,8 @@ public class Window {
 		comboDisks.setFont(new Font("Arial", Font.PLAIN, 20));
 		comboDisks.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				cargarFolderTable();
+				crearDisco(new File((String)comboDisks.getSelectedItem()));
+				cargarFolderTable(disco.getCarpetas());
 			}
 		});
 		comboDisks.setBounds(742, 14, 608, 30);
@@ -119,7 +153,7 @@ public class Window {
 				}
 			}
 		});
-		searchBox.setBounds(190, 11, 392, 36);
+		searchBox.setBounds(190, 11, 296, 36);
 		frmUsbmusic.getContentPane().add(searchBox);
 		searchBox.setColumns(10);
 		
@@ -145,7 +179,7 @@ public class Window {
 				"Id", "Titulo", "Artista", "Genero"
 			}
 		));
-		searchTable.getColumnModel().getColumn(1).setPreferredWidth(20);
+		searchTable.getColumnModel().getColumn(0).setPreferredWidth(20);
 		searchTable.getColumnModel().getColumn(1).setPreferredWidth(307);
 		searchTable.getColumnModel().getColumn(2).setPreferredWidth(154);
 		searchTable.getColumnModel().getColumn(3).setPreferredWidth(132);
@@ -169,9 +203,10 @@ public class Window {
 			new Object[][] {
 			},
 			new String[] {
-				"Carpeta"
+				"Id", "Carpeta"
 			}
 		));
+		folderTable.getColumnModel().getColumn(0).setPreferredWidth(20);
 		folderTable.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			
 			@Override
@@ -180,6 +215,8 @@ public class Window {
 			}
 		});
 		folderTable.setRowHeight(30);
+		folderTable.getColumnModel().getColumn(0).setPreferredWidth(10);
+		folderTable.getColumnModel().getColumn(1).setPreferredWidth(500);
 		scrollPane_1.setViewportView(folderTable);
 		
 		JScrollPane scrollPane_2 = new JScrollPane();
@@ -192,10 +229,12 @@ public class Window {
 			new Object[][] {
 			},
 			new String[] {
-				"Archivo"
+				"Id", "Archivo"
 			}
 		));
 		songTable.setRowHeight(30);
+		songTable.getColumnModel().getColumn(0).setPreferredWidth(10);
+		songTable.getColumnModel().getColumn(1).setPreferredWidth(500);
 		scrollPane_2.setViewportView(songTable);
 		
 		JButton button = new JButton("");
@@ -204,23 +243,30 @@ public class Window {
 				String nuevaCarpeta = JOptionPane.showInputDialog("Nombre de la nueva carpeta: ");
 				String folderS = (String)(comboDisks.getSelectedItem());
 				File folder = new File(folderS+nuevaCarpeta+"\\");
+				disco.addCarpeta(disco.getCarpetas().size(), folder);
 				folder.mkdir();
-				cargarFolderTable();
+				cargarFolderTable(disco.getCarpetas());
 			}
 		});
 		button.setIcon(new ImageIcon(Window.class.getResource("/Recursos/1453260062_Plus.png")));
 		button.setBounds(742, 241, 36, 36);
+		button.setOpaque(false);
+		button.setContentAreaFilled(false);
+		button.setBorderPainted(false);
 		frmUsbmusic.getContentPane().add(button);
 		
-		JButton button_1 = new JButton("");
-		button_1.addActionListener(new ActionListener() {
+		JButton btnAddSong = new JButton("");
+		btnAddSong.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				new Copier().execute();
 			}
 		});
-		button_1.setIcon(new ImageIcon(Window.class.getResource("/Recursos/1453260916_arrow-right.png")));
-		button_1.setBounds(786, 241, 36, 36);
-		frmUsbmusic.getContentPane().add(button_1);
+		btnAddSong.setIcon(new ImageIcon(Window.class.getResource("/Recursos/direction342.png")));
+		btnAddSong.setBounds(880, 241, 36, 36);
+		frmUsbmusic.getContentPane().add(btnAddSong);
+		btnAddSong.setOpaque(false);
+		btnAddSong.setContentAreaFilled(false);
+		btnAddSong.setBorderPainted(false);
 		
 		JButton btnPlay = new JButton("");
 		btnPlay.addActionListener(new ActionListener() {
@@ -286,6 +332,61 @@ public class Window {
 		btnRename.setBounds(10, 11, 36, 36);
 		frmUsbmusic.getContentPane().add(btnRename);
 		
+		JButton btnRemoveFolder = new JButton("");
+		btnRemoveFolder.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				int id = Integer.parseInt((String)folderTable.getValueAt(folderTable.getSelectedRow(), 0));
+				disco.removeCarpeta(id);
+				cargarFolderTable(disco.getCarpetas());
+			}
+		});
+		btnRemoveFolder.setIcon(new ImageIcon(Window.class.getResource("/Recursos/round.png")));
+		btnRemoveFolder.setOpaque(false);
+		btnRemoveFolder.setContentAreaFilled(false);
+		btnRemoveFolder.setBorderPainted(false);
+		btnRemoveFolder.setBounds(788, 241, 36, 36);
+		frmUsbmusic.getContentPane().add(btnRemoveFolder);
+		
+		JButton btnRemoveSong = new JButton("");
+		btnRemoveSong.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int folderId = Integer.parseInt((String)folderTable.getValueAt(folderTable.getSelectedRow(), 0));
+				int songId = Integer.parseInt((String)songTable.getValueAt(songTable.getSelectedRow(), 0));
+				Carpeta carpeta = disco.buscarCarpeta(folderId);
+				carpeta.removeCancion(songId);
+				folderSelected();
+			}
+		});
+		btnRemoveSong.setIcon(new ImageIcon(Window.class.getResource("/Recursos/direction338.png")));
+		btnRemoveSong.setOpaque(false);
+		btnRemoveSong.setContentAreaFilled(false);
+		btnRemoveSong.setBorderPainted(false);
+		btnRemoveSong.setBounds(834, 241, 36, 36);
+		frmUsbmusic.getContentPane().add(btnRemoveSong);
+		
+		JButton btnRefresh = new JButton("");
+		btnRefresh.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Loader loader = new Loader();
+				progressBar.setIndeterminate(true);
+				progressBar.setValue(50);
+				progressBar.setString("Cargando");
+				progressBar.setStringPainted(true);
+				loader.path = biblio.getPath();
+				loader.execute();
+			}
+		});
+		btnRefresh.setIcon(new ImageIcon(Window.class.getResource("/Recursos/reload8.png")));
+		btnRefresh.setOpaque(false);
+		btnRefresh.setContentAreaFilled(false);
+		btnRefresh.setBorderPainted(false);
+		btnRefresh.setBounds(67, 11, 36, 36);
+		frmUsbmusic.getContentPane().add(btnRefresh);
+		
+		progressBar = new JProgressBar();
+		progressBar.setBounds(496, 11, 86, 36);
+		frmUsbmusic.getContentPane().add(progressBar);
+		
 		JMenuBar menuBar = new JMenuBar();
 		frmUsbmusic.setJMenuBar(menuBar);
 		
@@ -293,13 +394,38 @@ public class Window {
 		menuBar.add(mnArchivo);
 		
 		JMenuItem mntmConfiguracion = new JMenuItem("Configuracion");
+		mntmConfiguracion.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				Loader loader = new Loader();
+				progressBar.setIndeterminate(true);
+				progressBar.setValue(50);
+				progressBar.setString("Cargando");
+				progressBar.setStringPainted(true);				
+				JFileChooser chooser = new JFileChooser();
+				chooser.setCurrentDirectory(new java.io.File("."));
+			    chooser.setDialogTitle("Seleccione la Biblioteca");
+			    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			    chooser.setAcceptAllFileFilterUsed(false);
+				if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) { 
+					biblio.setPath(chooser.getSelectedFile());
+				}
+				else {
+					System.out.println("No Selection ");
+				}
+				loader.path = biblio.getPath();
+				loader.execute();
+			}
+		});
 		mnArchivo.add(mntmConfiguracion);
 	}
 	protected void copySong() {
 		Cancion cancion = biblio.buscarCancion(Integer.parseInt((String) searchTable.getValueAt(searchTable.getSelectedRow(), 0)));
-		File copia = new File(comboDisks.getSelectedItem().toString()+(String)folderTable.getValueAt(folderTable.getSelectedRow(), 0)+"\\"+cancion.getPath().getName());
+		int folderId = Integer.parseInt((String) folderTable.getValueAt(folderTable.getSelectedRow(), 0));
+		Carpeta folder = disco.buscarCarpeta(folderId);
+		File copia = new File(folder.getPath().getAbsolutePath()+"\\"+cancion.getPath().getName());
 		try {
 			Files.copy(cancion.getPath().toPath(), copia.toPath(),StandardCopyOption.REPLACE_EXISTING);
+			folder.addCancion(folder.getCanciones().size(), copia);
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
@@ -307,35 +433,53 @@ public class Window {
 
 	protected void folderSelected() {
 		if (folderTable.getSelectedRow()!=-1) {
-			String folderS = (String) comboDisks.getSelectedItem();
-			folderS = folderS + folderTable.getValueAt(folderTable.getSelectedRow(), 0) + "\\";
-			File folder = new File(folderS);
-			File[] files = folder.listFiles();
+			List<Cancion> canciones = disco.buscarCarpeta(Integer.parseInt((String)folderTable.getValueAt(folderTable.getSelectedRow(), 0))).getCanciones();
 			DefaultTableModel model = (DefaultTableModel) songTable.getModel();
 			model.setRowCount(0);
-			if (files != null) {
-				for (File next : files) {
+			if (canciones!=null) {
+				for (Cancion next : canciones) {
 					Vector<String> row = new Vector<String>();
+					row.add(String.valueOf(next.getId()));
 					row.add(next.getName());
 					model.addRow(row);
 				}
 			} 
 		}
 	}
-
-	protected void cargarFolderTable() {
-		DefaultTableModel modelSong=(DefaultTableModel) songTable.getModel();
-		modelSong.setRowCount(0);
-		File disk = new File((String)(comboDisks.getSelectedItem()));
-		File[] files = disk.listFiles();
-		DefaultTableModel model = (DefaultTableModel) folderTable.getModel();
-		model.setRowCount(0);
+	
+	protected Disco crearDisco(File path){
+		disco = new Disco(path);
+		File[] files = disco.getPath().listFiles();
+		int i=0;
 		for(File next: files){
 			if(next.isDirectory()){
-				Vector<String> row = new Vector<String>();
-				row.add(next.getName());
-				model.addRow(row);
+				Carpeta carpeta = disco.addCarpeta(i, next.getAbsoluteFile());
+				i++;
+				File[] filesInFolder = carpeta.getPath().listFiles();
+				int j=0;
+				if (filesInFolder!=null) {
+					for (File nextSong : filesInFolder) {
+						if (!nextSong.isDirectory()) {
+							carpeta.addCancion(j, nextSong.getAbsoluteFile());
+							j++;
+						}
+					} 
+				}
 			}
+		}
+		return disco;
+	}
+
+	protected void cargarFolderTable(List<Carpeta> carpetas) {
+		DefaultTableModel modelSong=(DefaultTableModel) songTable.getModel();
+		modelSong.setRowCount(0);
+		DefaultTableModel model = (DefaultTableModel) folderTable.getModel();
+		model.setRowCount(0);
+		for(Carpeta next: carpetas){			
+			Vector<String> row = new Vector<String>();
+			row.add(String.valueOf(next.getId()));
+			row.add(next.getName());
+			model.addRow(row);
 		}
 	}
 
@@ -348,7 +492,8 @@ public class Window {
 		for (int i = 0; i < f.length; i++) {
 			File drive = f[i];
 			String type = fsv.getSystemTypeDescription(f[i]);
-			if (type.equals("Unidad de USB") ) {
+			//JOptionPane.showMessageDialog(null, f[i].getPath() + "=" + type + ".");
+			if (type.equals("Unidad de USB") || type.equals("Disco extraíble")) {
 				driveLetter.add(drive);
 			}						
 		}
@@ -375,8 +520,8 @@ public class Window {
 		}
 	}
 	
-	protected void inicializarDB(){
-		biblio = new Biblioteca(new File("Archivos\\"));
+	protected void inicializarDB(File path){
+		biblio = new Biblioteca(path);
 		List<Cancion> canciones = biblio.cargar();
 		cargarSearchTable(canciones);
 	}
@@ -404,15 +549,33 @@ public class Window {
 		return songTable;
 	}
 	class Copier extends SwingWorker<String, Object> {
-        @Override
-       public String doInBackground() {
-           copySong();
-           return "Finalizado";
-       }
+		@Override
+		public String doInBackground() {
+			copySong();
+			return "Finalizado";
+		}
 
-        @Override
-       protected void done() {
-        	folderSelected();
-       }
-   }
+		@Override
+		protected void done() {
+			folderSelected();
+		}
+	}
+	class Loader extends SwingWorker<String, Object> {
+		File path;
+		@Override
+		public String doInBackground() {
+			inicializarDB(path);
+			return "Finalizado";
+		}
+
+		@Override
+		protected void done() {
+			progressBar.setStringPainted(false);;
+			progressBar.setIndeterminate(false);
+			progressBar.setValue(progressBar.getMinimum());
+		}
+	}
+	public JProgressBar getProgressBar() {
+		return progressBar;
+	}
 }

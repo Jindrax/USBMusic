@@ -1,9 +1,25 @@
 package Data;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
 
-public class Cancion {
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.AudioHeader;
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
+import org.jaudiotagger.tag.TagException;
+
+public class Cancion implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -8141944073647001007L;
 	private int id = 0;
 	private File path = null;
 	private String name = "";
@@ -26,6 +42,40 @@ public class Cancion {
 		this.author = author;
 		this.genre = genre;
 		this.lenght = lenght;
+	}
+	
+	public Cancion(int id, File path){
+		try {
+			this.id = id;
+			this.path = path;
+			AudioFile aF = AudioFileIO.read(path);
+			Tag tag = aF.getTag();
+			AudioHeader aH = aF.getAudioHeader();
+			if (tag!=null) {
+				String titulo = tag.getFirst(FieldKey.TITLE);
+				String artista = tag.getFirst(FieldKey.ARTIST);
+				String genero = tag.getFirst(FieldKey.GENRE);					
+				if (!titulo.equals("")) {
+					this.name=titulo;
+					this.author=artista;
+					this.genre=genero;
+					this.lenght=aH.getTrackLength();
+				} else {
+					this.name=path.getName().substring(0, path.getName().length() - 4);
+					this.author=artista;
+					this.genre=genero;
+					this.lenght=aH.getTrackLength();
+				}
+			}else{
+				this.name=path.getName().substring(0, path.getName().length() - 4);
+				this.author="";
+				this.genre="";
+				this.lenght=aH.getTrackLength();
+			}
+		} catch (CannotReadException | IOException | TagException | ReadOnlyFileException
+				| InvalidAudioFrameException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public File getPath() {
@@ -83,5 +133,7 @@ public class Cancion {
 	public void setId(int id) {
 		this.id = id;
 	}
-	
+	public void removeCancion(){
+		this.path.delete();
+	}
 }

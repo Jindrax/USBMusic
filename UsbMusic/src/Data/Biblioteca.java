@@ -2,6 +2,7 @@ package Data;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,8 +16,12 @@ import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.TagException;
 
-public class Biblioteca {
+public class Biblioteca implements Serializable{
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 330484211429418667L;
 	private File path = null;
 	List<Cancion> canciones = null;
 	/**
@@ -81,7 +86,6 @@ public class Biblioteca {
 				canciones.add(cancion);
 			} catch (CannotReadException | IOException | TagException | ReadOnlyFileException
 					| InvalidAudioFrameException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

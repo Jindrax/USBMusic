@@ -11,15 +11,18 @@ public class Carpeta {
 	private List<Cancion> canciones = null;
 	private int lenght = 0;
 	private long size = 0;
+	private int id = 0;
 	/**
 	 * @param path
 	 * @param nombre
 	 * @param canciones
 	 * @param lenght
 	 */
-	public Carpeta(String nombre) {
+	public Carpeta(int id, File path) {
 		super();
-		this.name = nombre;
+		this.id = id;
+		this.path = path;
+		this.name = path.getName();
 		this.canciones = new ArrayList<Cancion>();
 	}
 	
@@ -62,6 +65,14 @@ public class Carpeta {
 	public void setSize(long size) {
 		this.size = size;
 	}
+	
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
 
 	public int calcularDuracion(){
 		for(Cancion next: canciones){
@@ -75,14 +86,22 @@ public class Carpeta {
 		}
 		return this.size;
 	}
-	public void addCancion(Cancion cancion){
+	public void addCancion(int id, File path){
+		Cancion cancion = new Cancion(id, path);
 		canciones.add(cancion);
 	}
-	public void removeCancion(String name){
+	public Cancion buscarCancion(int id){
 		for(Cancion next: canciones){
-			if(next.getName().equals(name)){
-				canciones.remove(next);
+			if(next.getId()==id){
+				return next;
 			}
 		}
+		return null;
 	}
+	public void removeCancion(int id){
+		Cancion cancion = buscarCancion(id);
+		cancion.getPath().delete();
+		canciones.remove(cancion);
+	}
+	
 }

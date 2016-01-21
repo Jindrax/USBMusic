@@ -23,9 +23,10 @@ public class Disco {
 	 * @param path
 	 * @param name
 	 */
-	public Disco(String name) {
+	public Disco(File path) {
 		super();
-		this.name = name;
+		this.path = path;
+		this.name = path.getName();
 		this.carpetas = new ArrayList<Carpeta>();
 	}
 	public void setPath(File path) {
@@ -61,15 +62,26 @@ public class Disco {
 		}
 		return this.size;
 	}
-	public void addCarpeta(Carpeta carpeta){
+	public Carpeta addCarpeta(int id, File path){
+		Carpeta carpeta = new Carpeta(id, path);
 		carpetas.add(carpeta);
+		return carpeta;
 	}
-	public void removeCarpeta(String name){
+	public Carpeta buscarCarpeta(int id){
 		for(Carpeta next: carpetas){
-			if(next.getName().equals(name)){
-				carpetas.remove(next);
+			if(next.getId()==id){
+				return next;
 			}
 		}
+		return null;
+	}
+	public void removeCarpeta(int id){
+		Carpeta carpeta = buscarCarpeta(id);
+		for(Cancion next: carpeta.getCanciones()){
+			next.removeCancion();
+		}
+		carpeta.getPath().delete();
+		carpetas.remove(carpeta);
 	}
 	public void localizar(File path){
 		setPath(path);
@@ -78,5 +90,11 @@ public class Disco {
 			next.setPath(nextPath);
 		}
 	}
-	
+	public List<Carpeta> getCarpetas() {
+		return carpetas;
+	}
+	public void setCarpetas(List<Carpeta> carpetas) {
+		this.carpetas = carpetas;
+	}
+		
 }
